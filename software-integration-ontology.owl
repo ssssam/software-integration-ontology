@@ -1,0 +1,209 @@
+# Copyright (C) 2015  Codethink Limited
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Working title: the "software integration ontology". First draft.
+#
+# This is intended as a BASE vocabulary for software build & integration
+# instructions. Real build tools will have to make at a few extensions in
+# order to have actual working build instructions.
+
+
+# Partial OWL and RDF Schema glossary:
+#
+# domain: the set of objects that a can have a property.
+# range: the set of possible values for a property.
+#
+# ObjectProperty:
+#   a property whose value must be another resource.
+# DatatypeProperty:
+#   a property whose value is one of the datatype defined by XML Schema ("xsd")
+# FunctionalProperty:
+#   a property which can only have one value per resource
+# InverseFunctionalProperty:
+#   a property which can only have one resource per value
+
+# This ontology.
+@prefix : <http://baserock.org/definitions/example-schema#> .
+
+# Resource Description Framework: basic primitives.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# RDF Schema: basic schema rules.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# Web Ontology Language, for further schema definition.
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+# XML Schema datatypes.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Dublin Core: a set of very common properties.
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+
+# Description of a Project: describes software projects.
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+
+# Software Package Data Exchange: describes software licensing.
+@prefix spdx: <http://spdx.org/rdf/terms#> .
+
+# Classes
+
+:Artifact a owl:Class ;
+  rdfs:comment "A file or set of files that is interesting for some reason." .
+
+:Source a owl:Class ;
+  # I don't know how useful it is to consider source code a type
+  # of artifact, but in abstract terms it seems correct. I can't see where to
+  # draw a line to say "this is source code" vs. "this is a built artifact",
+  # because some source code can be executed without any kind of "build"
+  # process.
+  rdfs:subClassOf :Artifact ;
+  rdfs:comment "A repository of source code." ;
+  # FIXME: why not just use doap:Repository ?
+  owl:equivalentClass doap:Repository .
+
+:GitRepository a owl:Class ;
+  rdfs:subClassOf :Source ;
+  rdfs:comment "A Git repository containing source code." ;
+  # FIXME: why not just use doap:GitRepository ?
+  owl:equivalentClass doap:GitRepository .
+
+:ExecutableArtifact a owl:Class ;
+  rdfs:subClassOf :Artifact ;
+  rdfs:comment "A file or set of files that can be executed on a computer. This includes both programs and libraries." .
+
+:Collection a owl:Class ;
+  rdfs:subClassOf :Artifact ;
+  rdfs:comment "A set of artifacts that are grouped together for some reason." .
+
+:System a owl:Class ;
+  rdfs:subClassOf :Collection ;
+  rdfs:comment "An artifact that can be executed as the operating system of a computer." .
+
+:BuildInstructions a owl:Class ;
+  rdfs:comment "Describes how to produce an artifact from some source." .
+
+:CommandSequence a owl:Class ;
+  rdfs:subClassOf :BuildInstructions ;
+  rdfs:comment "A sequence of commands that should be executed in order." .
+
+# Properties
+
+:url a owl:DatatypeProperty ;
+  rdfs:comment "A location that an artifact can be fetched from." ;
+  rdfs:domain :Artifact ;
+  # FIXME: there's probably a URL type we can use already ...
+  rdfs:range xsd:string .
+
+:hasFeature a owl:ObjectProperty ;
+  rdfs:comment "An open-ended property that can be used for distinguishing between multiple variants of an artifact." ;
+  rdfs:domain :Artifact .
+  # No range defined at the moment, use any made up URL. E.G. when
+  # distinguishing different artifacts that can be built from the source tree of
+  # the Mesa graphics library, you might say ':hasFeature
+  # <driver://intel-i915>'. Until projects provide their own vocabularies for
+  # talking about the various feature options they have, you're going to be on
+  # your own with this.
+
+:hasRuntimeDependency a owl:ObjectProperty ;
+  rdfs:comment "An artifact cannot function unless this other artifact is in the same collection." ;
+  rdfs:domain :ExecutableArtifact ;
+  rdfs:range :ExecutableArtifact .
+
+:forArchitecture a owl:ObjectProperty ;
+  rdfs:comment "The type of computer that a given executable artifact expects to run on." ;
+  rdfs:domain :ExecutableArtifact .
+  # No range defined at the moment: you can use any made up URL,
+  # I suggest <arch:x86_64>, <arch:armv7> etc.
+  #
+  # In future we need to come up with a formal vocabulary for machine
+  # architectures. But that will be an ongoing maintenance burden.
+  #
+  # The dbpedia 'computing platform' term is similar:
+  # http://dbpedia.org/ontology/computingPlatform
+
+:containArtifact a owl:ObjectProperty ;
+  rdfs:comment "Indicates that a collection includes a given artifact." ;
+  rdfs:domain :Collection ;
+  rdfs:range :Artifact .
+
+:buildsSource a owl:ObjectProperty ;
+  rdfs:comment "Indicates an input to a build process." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :Source .
+  # This will need extensions to actually be useful. For a GitRepository, for
+  # example, you will need a :ref property as well.
+
+:producesArtifact a owl:ObjectProperty ;
+  rdfs:comment "Indicates an output of a build process." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :Artifact .
+
+:buildRequires a owl:ObjectProperty ;
+  rdfs:comment "Indicates a dependency that must be available during a build process." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :Artifact .
+
+:configureCommandSequence a owl:FunctionalProperty ;
+  rdfs:command "Command sequence used to configure a source code tree. For example, this might run a './configure' script with a certain set of options." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :CommandSequence .
+
+:buildCommandSequence a owl:FunctionalProperty ;
+  rdfs:command "Command sequence used to build a source code tree, after any configure commands have been run. For example, this might run `make`." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :CommandSequence .
+
+:installCommandSequence a owl:FunctionalProperty ;
+  rdfs:command "Command sequence used to install a source code tree into a destination directory, after any configure and bulid commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
+  rdfs:domain :BuildInstructions ;
+  rdfs:range :CommandSequence .
+
+# References to Dublin Core (dc), which is a set of very common properties 
+
+:hasRuntimeDependency rdfs:subPropertyOf dc:requires .
+
+:buildRequires rdfs:subPropertyOf dc:requires .
+
+:containsArtifact rdfs:subPropertyOf dc:hasPart .
+
+# Other dc: properties you might want to use:
+#
+#   dc:creator
+#   dc:description
+#   dc:title
+
+# References to Description of a Project (DOAP), which is a vocabulary for
+# talking about projects (usually software development projects).
+
+:developedBy a owl:ObjectProperty ;
+  rdfs:comment "Who is responsible for hosting, maintaining and improving this project?" ;
+  rdfs:domain :Source ;
+  # Description of a Project (DOAP) provides a vocabulary for talking about
+  # software projects, with properties like doap:homepage, doap:mailing-list,
+  # doap:maintainer etc.
+  rdfs:range doap:Project .
+
+# References to Software Package Data Exchange (SPDX), which provides a
+# vocabulary for representing licenses and distribution rights for source code
+# and artifacts.
+
+:Artifact owl:equivalentClass spdx:Package .
+
+# I've not linked to the Software Ontology because all of the URIs I can find
+# are totally unreadable. The URI for the 'software' class, for example, seems
+# to be <http://www.ebi.ac.uk/swo/SWO_0000001>. You can browse it all here if
+# you are interested: <http://bioportal.bioontology.org/ontologies/SWO>.
+

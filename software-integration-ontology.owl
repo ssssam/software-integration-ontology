@@ -70,15 +70,11 @@
   # because some source code can be executed without any kind of "build"
   # process.
   rdfs:subClassOf :Artifact ;
-  rdfs:comment "A repository of source code." ;
-  # FIXME: why not just use doap:Repository ?
-  owl:equivalentClass doap:Repository .
+  rdfs:comment "A repository of source code." .
 
 :GitRepository a owl:Class ;
   rdfs:subClassOf :Source ;
-  rdfs:comment "A Git repository containing source code." ;
-  # FIXME: why not just use doap:GitRepository ?
-  owl:equivalentClass doap:GitRepository .
+  rdfs:comment "A Git repository containing source code." .
 
 :ExecutableArtifact a owl:Class ;
   rdfs:subClassOf :Artifact ;
@@ -188,6 +184,10 @@
 # References to Description of a Project (DOAP), which is a vocabulary for
 # talking about projects (usually software development projects).
 
+:Source owl:equivalentClass doap:Repository .
+
+:GitRepository owl:equivalentClass doap:GitRepository .
+
 :developedBy a owl:ObjectProperty ;
   rdfs:comment "Who is responsible for hosting, maintaining and improving this project?" ;
   rdfs:domain :Source ;
@@ -195,6 +195,11 @@
   # software projects, with properties like doap:homepage, doap:mailing-list,
   # doap:maintainer etc.
   rdfs:range doap:Project .
+
+# Some doap: properties you might want to use:
+#
+#   doap:mailing-list
+#   doap:maintainer
 
 # References to Software Package Data Exchange (SPDX), which provides a
 # vocabulary for representing licenses and distribution rights for source code

@@ -58,7 +58,9 @@
 # Software Package Data Exchange: describes software licensing.
 @prefix spdx: <http://spdx.org/rdf/terms#> .
 
-# Classes
+#####################
+### LEVEL 1 Classes
+#####################
 
 :Artifact a owl:Class ;
   rdfs:comment "A file or set of files that is interesting for some reason." .
@@ -71,10 +73,6 @@
   # process.
   rdfs:subClassOf :Artifact ;
   rdfs:comment "A repository of source code." .
-
-:GitRepository a owl:Class ;
-  rdfs:subClassOf :Source ;
-  rdfs:comment "A Git repository containing source code." .
 
 :ExecutableArtifact a owl:Class ;
   rdfs:subClassOf :Artifact ;
@@ -95,9 +93,11 @@
   rdfs:subClassOf :BuildInstructions ;
   rdfs:comment "A sequence of commands that should be executed in order." .
 
-# Properties
+########################
+### LEVEL 1 Properties
+########################
 
-:url a owl:DatatypeProperty ;
+:location a owl:DatatypeProperty ;
   rdfs:comment "A location that an artifact can be fetched from." ;
   rdfs:domain :Artifact ;
   # FIXME: there's probably a URL type we can use already ...
@@ -114,7 +114,7 @@
   # your own with this.
 
 :hasRuntimeDependency a owl:ObjectProperty ;
-  rdfs:comment "An artifact cannot function unless this other artifact is in the same collection." ;
+  rdfs:comment "An artifact cannot function unless this other artifact is present in the same filesystem at a known path." ;
   rdfs:domain :ExecutableArtifact ;
   rdfs:range :ExecutableArtifact .
 
@@ -132,7 +132,7 @@
 
 :containArtifact a owl:ObjectProperty ;
   rdfs:comment "Indicates that a collection includes a given artifact." ;
-  rdfs:domain :Collection ;
+  rdfs:domain :Group ;
   rdfs:range :Artifact .
 
 :buildsSource a owl:ObjectProperty ;
@@ -166,6 +166,24 @@
   rdfs:command "Command sequence used to install a source code tree into a destination directory, after any configure and bulid commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :CommandSequence .
+
+:hasComment a owl:DatatypeProperty ;
+  rdfs:comment "Arbitrary comments, to be used to record information that cannot be expressed using the existing ontology" .
+
+############
+## LEVEL 2
+############
+
+:GitRepository a owl:Class ;
+  rdfs:subClassOf :Source ;
+  rdfs:comment "A Git repository containing files." .
+
+:GitCommit a owl:Class ;
+  rdfs:comment "A specific commit of a Git repository." .
+
+:Tarball a owl:Class ;
+  rdfs:subClassOf :Source ;
+  rdfs:comment "Files stored as a tarball." .
 
 # References to Dublin Core (dc), which is a set of very common properties 
 

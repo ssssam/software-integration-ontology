@@ -80,12 +80,12 @@
   rdfs:subClassOf :Artifact ;
   rdfs:comment "A file or set of files that can be executed on a computer. This includes both programs and libraries." .
 
-:Collection a owl:Class ;
+:Group a owl:Class ;
   rdfs:subClassOf :Artifact ;
   rdfs:comment "A set of artifacts that are grouped together for some reason." .
 
-:System a owl:Class ;
-  rdfs:subClassOf :Collection ;
+:OperatingSystem a owl:Class ;
+  rdfs:subClassOf :Group ;
   rdfs:comment "An artifact that can be executed as the operating system of a computer." .
 
 :BuildInstructions a owl:Class ;

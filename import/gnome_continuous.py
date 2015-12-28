@@ -110,6 +110,10 @@ def serialize_to_json_ld(rdflib_graph):
     return rdflib_graph.serialize(format='json-ld', indent=4, context=context)
 
 
+def serialize_to_rdfxml(rdflib_graph):
+    return rdflib_graph.serialize(format='xml', indent=4)
+
+
 def main():
     args = argument_parser().parse_args()
 
@@ -119,6 +123,7 @@ def main():
     graph = GnomeContinuousImporter().parse_manifest(
         manifest, args.output_location)
 
-    sys.stdout.write(serialize_to_json_ld(graph).decode('utf8'))
+    #sys.stdout.write(serialize_to_json_ld(graph).decode('utf8'))
+    sys.stdout.write(serialize_to_rdfxml(graph).decode('utf8'))
 
 main()

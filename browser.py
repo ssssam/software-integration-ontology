@@ -5,10 +5,8 @@ import rdflib
 
 graph = rdflib.Graph()
 #graph.load('foo.json', format='json-ld')
-graph.load('foo.rdfxml', format='xml')
-
-import pdb
-pdb.set_trace()
+#graph.load('foo.rdfxml', format='xml')
+graph.load('definitions.rdfxml', format='xml')
 
 app = rdflib_web.lod.get(graph)
 

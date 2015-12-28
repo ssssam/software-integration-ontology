@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
+# Copyright 2015 Sam Thursfield
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Parse a GNOME Continuous input manifest.
 
-# See also: http://git.baserock.org/cgi-bin/cgit.cgi/baserock/baserock/definitions.git/tree/schema/parse.py?h=sam/schema
+'''Parser for the GNOME Continuous input manifest format.'''
+
 
 import rdflib
 
@@ -11,6 +25,8 @@ import json
 import os
 import sys
 import urllib
+
+import helpers
 
 
 DEFAULT_URL = 'https://git.gnome.org/browse/gnome-continuous/plain/manifest.json'
@@ -29,15 +45,12 @@ def argument_parser():
     return parser
 
 
-class SoftwareNamespace(rdflib.namespace.Namespace):
-    def source(self, source_name):
-        return self.term('sources/' + source_name)
-
-
 class GnomeContinuousImporter():
     def parse_manifest(self, manifest, base_uri):
-        namespace = SoftwareNamespace(base_uri)
+        namespace = helpers.SoftwareNamespace(base_uri)
         graph = rdflib.Graph()
+
+        graph.bind('software', SOFTWARE)
 
         # FIXME: write a json-schema for gnome-continuous; put it upstream
 
@@ -101,19 +114,6 @@ class GnomeContinuousImporter():
         return component
 
 
-def serialize_to_json_ld(rdflib_graph):
-    context = {
-        "@vocab": SOFTWARE,
-        "@language": "en"
-    }
-    # requires rdflib-jsonld Python module.
-    return rdflib_graph.serialize(format='json-ld', indent=4, context=context)
-
-
-def serialize_to_rdfxml(rdflib_graph):
-    return rdflib_graph.serialize(format='xml', indent=4)
-
-
 def main():
     args = argument_parser().parse_args()
 
@@ -123,7 +123,8 @@ def main():
     graph = GnomeContinuousImporter().parse_manifest(
         manifest, args.output_location)
 
-    #sys.stdout.write(serialize_to_json_ld(graph).decode('utf8'))
-    sys.stdout.write(serialize_to_rdfxml(graph).decode('utf8'))
+    #sys.stdout.write(helpers.serialize_to_json_ld(graph).decode('utf8'))
+    sys.stdout.write(helpers.serialize_to_rdfxml(graph).decode('utf8'))
+
 
 main()

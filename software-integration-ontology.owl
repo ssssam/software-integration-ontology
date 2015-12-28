@@ -63,6 +63,8 @@
 #####################
 
 :Artifact a owl:Class ;
+  # This includes OSTree trees, Git trees, normal filesystem tres, individual
+  # files, ...
   rdfs:comment "A file or set of files that is interesting for some reason." .
 
 :Source a owl:Class ;
@@ -76,15 +78,11 @@
 
 :ExecutableArtifact a owl:Class ;
   rdfs:subClassOf :Artifact ;
-  rdfs:comment "A file or set of files that can be executed on a computer. This includes both programs and libraries." .
+  rdfs:comment "A file or set of files that can be executed on a computer. This includes programs, libraries and operating systems." .
 
 :Group a owl:Class ;
   rdfs:subClassOf :Artifact ;
   rdfs:comment "A set of artifacts that are grouped together for some reason." .
-
-:OperatingSystem a owl:Class ;
-  rdfs:subClassOf :Group ;
-  rdfs:comment "An artifact that can be executed as the operating system of a computer." .
 
 :BuildInstructions a owl:Class ;
   rdfs:comment "Describes how to produce an artifact from some source." .
@@ -118,7 +116,7 @@
   rdfs:domain :ExecutableArtifact ;
   rdfs:range :ExecutableArtifact .
 
-:forArchitecture a owl:ObjectProperty ;
+:architecture a owl:ObjectProperty ;
   rdfs:comment "The type of computer that a given executable artifact expects to run on." ;
   rdfs:domain :ExecutableArtifact .
   # No range defined at the moment: you can use any made up URL,
@@ -130,21 +128,23 @@
   # The dbpedia 'computing platform' term is similar:
   # http://dbpedia.org/ontology/computingPlatform
 
-:containArtifact a owl:ObjectProperty ;
-  rdfs:comment "Indicates that a collection includes a given artifact." ;
-  rdfs:domain :Group ;
-  rdfs:range :Artifact .
-
-:buildsSource a owl:ObjectProperty ;
-  rdfs:comment "Indicates an input to a build process." ;
+:process a owl:ObjectProperty ;
+  rdfs:comment "Indicate what build instructions produces/produced an artifact." ;
   rdfs:domain :BuildInstructions ;
-  rdfs:range :Source .
+  rdfs:range :Artifact .
   # This will need extensions to actually be useful. For a GitRepository, for
   # example, you will need a :ref property as well.
 
-:producesArtifact a owl:ObjectProperty ;
-  rdfs:comment "Indicates an output of a build process." ;
-  rdfs:domain :BuildInstructions ;
+:source a owl:ObjectProperty ;
+  rdfs:comment "Indicate what source code produces/produced an artifact." ;
+  rdfs:domain :Source ;
+  rdfs:range :Artifact .
+  # This will need extensions to actually be useful. For a GitRepository, for
+  # example, you will need a :ref property as well.
+
+:containsArtifact a owl:ObjectProperty ;
+  rdfs:comment "Indicates that a collection includes a given artifact." ;
+  rdfs:domain :Group ;
   rdfs:range :Artifact .
 
 :buildRequires a owl:ObjectProperty ;
@@ -163,7 +163,7 @@
   rdfs:range :CommandSequence .
 
 :installCommandSequence a owl:FunctionalProperty ;
-  rdfs:command "Command sequence used to install a source code tree into a destination directory, after any configure and bulid commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
+  rdfs:command "Command sequence used to install a source code tree into a destination directory, after any configure and build commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :CommandSequence .
 
@@ -175,11 +175,13 @@
 ############
 
 :GitRepository a owl:Class ;
-  rdfs:subClassOf :Source ;
-  rdfs:comment "A Git repository containing files." .
+  # This is not a Source, it's a really a Group but there's not much
+  # use in treating it as such.
+  rdfs:comment "A Git repository containing commits & trees." .
 
-:GitCommit a owl:Class ;
-  rdfs:comment "A specific commit of a Git repository." .
+:GitObject a owl:Class ;
+  rdfs:subClassOf :Source ;
+  rdfs:comment "A specific commit or tree in a Git repository, identified by a SHA1 hash." .
 
 :Tarball a owl:Class ;
   rdfs:subClassOf :Source ;

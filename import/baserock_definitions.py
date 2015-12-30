@@ -94,15 +94,8 @@ def parse_morph_file(path):
     return contents
 
 
-def get_name_from_morph_file(path):
-    '''Returns the 'name' defined in a specific .morph file.
-
-    This is a convenience function for resolving places where one .morph file
-    in a set references another one.
-
-    '''
-    contents = parse_morph_file(path)
-    return contents['name']
+def uriref(resource):
+    return rdflib.URIRef(resource.identifier)
 
 
 class BaserockSoftwareNamespace(helpers.SoftwareNamespace):
@@ -331,7 +324,7 @@ class BaserockDefinitionsImporter():
             contents = self.parsed_files[stratum_file]
 
             stratum_source = self.add_stratum(
-                toplevel_path, contents, artifact_uriref, arch, defaults)
+                toplevel_path, contents, artifact, arch, defaults)
 
             # All the artifacts need to be created even if they aren't included
             # in the final system, because something might build-depend on
@@ -344,7 +337,7 @@ class BaserockDefinitionsImporter():
             for stratum_artifact in stratum_artifacts:
                 artifact.add(SOFTWARE.containsArtifact, stratum_artifact)
 
-    def add_stratum(self, toplevel_path, contents, system_artifact_uriref,
+    def add_stratum(self, toplevel_path, contents, system_artifact,
                     arch, defaults):
         source_uriref = self.ns.stratum(contents['name'], arch)
         source = self.new_resource(
@@ -352,9 +345,10 @@ class BaserockDefinitionsImporter():
 
         for entry in contents.get('build-depends', []):
             build_dep_file = os.path.join(toplevel_path, entry['morph'])
-            build_dep_name = get_name_from_morph_file(build_dep_file)
+            build_dep_contents = self.parsed_files[build_dep_file]
+            build_dep_name = build_dep_contents['name']
             build_dep_artifacts = self.artifacts_for_stratum(
-                system_artifact_uriref, build_dep_name)
+                uriref(system_artifact), build_dep_name)
             for build_dep_uriref in build_dep_artifacts:
                 source.add(SOFTWARE.buildRequires, build_dep_uriref)
 
@@ -388,7 +382,8 @@ class BaserockDefinitionsImporter():
             for artifact in artifacts:
                 if 'morph' in entry:
                     chunk_file = os.path.join(toplevel_path, entry['morph'])
-                    chunk_name = get_name_from_morph_file(chunk_file)
+                    chunk_contents = self.parsed_files[chunk_file]
+                    chunk_name = chunk_contents['name']
                     if chunk_name != entry['name']:
                         warnings.warn(
                             "Chunk name %s in stratum %s doesn't match "
@@ -396,29 +391,25 @@ class BaserockDefinitionsImporter():
                                               entry['morph']))
 
                     chunk_contents = self.parsed_files[chunk_file]
-                    chunk_source = self.add_chunk(
-                        rdflib.URIRef(source.identifier), chunk_contents, arch)
+                    chunk_source = self.add_chunk(source, chunk_contents, arch)
                 else:
                     chunk_name = entry['name']
                     chunk_contents = None
                     chunk_source = self.generate_chunk_morph(
-                        rdflib.URIRef(source.identifier), chunk_name,
-                        entry['build-system'], defaults)
+                        source, chunk_name, entry['build-system'], defaults)
 
                 for entry_dep in entry.get('build-depends', []):
                     build_dep_artifacts = self.artifacts_for_chunk(
-                        rdflib.URIRef(artifact.identifier),
-                        entry_dep)
+                        uriref(artifact), entry_dep)
                     for build_dep_artifact in build_dep_artifacts:
                         build_dep_uriref = self.ns.chunk_artifact(
-                            rdflib.URIRef(artifact.identifier),
-                            build_dep_artifact)
+                            uriref(artifact), build_dep_artifact)
                         chunk_source.set(
                             SOFTWARE.BuildRequires, build_dep_uriref)
 
                 # FIXME: need to honour the splitting rules here
                 chunk_artifacts = self.add_chunk_artifacts(
-                    chunk_source, artifact.identifier, chunk_name,
+                    chunk_source, artifact, chunk_name,
                     chunk_contents, arch)
 
                 for chunk_artifact in chunk_artifacts:
@@ -450,20 +441,20 @@ class BaserockDefinitionsImporter():
                     artifact.add(
                         SOFTWARE.containsArtifact, chunk_artifact)
 
-    def add_chunk(self, stratum_source_uriref, contents, arch):
-        source_uriref = self.ns.chunk(stratum_source_uriref, contents['name'])
+    def add_chunk(self, stratum_source, contents, arch):
+        source_uriref = self.ns.chunk(uriref(stratum_source), contents['name'])
         source = self.new_resource(source_uriref,
                                    types=[SOFTWARE.BuildInstructions])
         return source
 
-    def add_chunk_artifacts(self, source, stratum_artifact_uriref, chunk_name,
+    def add_chunk_artifacts(self, source, stratum_artifact, chunk_name,
                             contents, arch):
         # FIXME: need to honour the splitting rules here
         if contents is not None and chunk_name != contents['name']:
             warnings.warn("Chunk name %s doesn't match name %s in stratum %s" %
                           (chunk_name, contents['name'],
-                           stratum_artifact_uriref))
-        artifact_urirefs = self.artifacts_for_chunk(stratum_artifact_uriref,
+                           stratum_artifact))
+        artifact_urirefs = self.artifacts_for_chunk(uriref(stratum_artifact),
                                                     chunk_name)
         artifacts = []
         for artifact_uriref in artifact_urirefs:
@@ -491,9 +482,9 @@ class BaserockDefinitionsImporter():
         #set_command_sequence(chunk, 'install-commands')
         #set_command_sequence(chunk, 'post-install-commands')
 
-    def generate_chunk_morph(self, stratum_uriref, chunk_name, buildsystem,
+    def generate_chunk_morph(self, stratum, chunk_name, buildsystem,
                              defaults):
-        chunk_uriref = self.ns.chunk(stratum_uriref, chunk_name)
+        chunk_uriref = self.ns.chunk(uriref(stratum), chunk_name)
         chunk = self.new_resource(chunk_uriref,
                                   types=[SOFTWARE.BuildInstructions])
 

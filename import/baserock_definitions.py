@@ -17,7 +17,7 @@
 
 '''Parser for the Baserock Definitions format.
 
-This code understands the syntax of Baserock Definitions format version 5.
+This code understands the syntax of Baserock Definitions format version 7.
 
 The current version of the Baserock Definitions format is defined at:
 
@@ -48,6 +48,20 @@ SOFTWARE = rdflib.namespace.Namespace(
     'http://www.baserock.org/software-integration-ontology#')
 
 
+class AppendCommaSeparatedListAction(argparse.Action):
+    '''Collect multiple string arguments and allow comma-delimited lists.
+
+    The usual 'append' action enables specifying lists of arguments by passing
+    them one at a time (-a=1 -a=2 -a=3) but it doesn't handle comma-separation
+    (-a=1,2,3). This action handles both.
+
+    '''
+    def __call__(self, parser, namespace, values, option_string=None):
+        new_values = values.split(',')
+        existing_values = getattr(namespace, self.dest) or []
+        setattr(namespace, self.dest, existing_values + new_values)
+
+
 def argument_parser():
     parser = argparse.ArgumentParser(
         description="Parse a Baserock definitions repository")
@@ -55,6 +69,10 @@ def argument_parser():
                         help="Path to the root of the definitions repository")
     parser.add_argument('output_location', type=str,
                         help="Location of the resulting resources (base URI)")
+    parser.add_argument('--architectures', '-a',
+                        action=AppendCommaSeparatedListAction,
+                        help="Only import definitions for the given "
+                             "architectures.")
     return parser
 
 
@@ -104,9 +122,6 @@ class BaserockSoftwareNamespace(helpers.SoftwareNamespace):
         assert isinstance(stratum_artifact_uriref, rdflib.URIRef)
         return stratum_artifact_uriref + '/' + chunk_artifact_name
 
-    def cluster(self, cluster_name):
-        return self.group('clusters/' + cluster_name)
-
 #    def command_sequence(self, chunk_uriref, sequence_name):
 #        # We use '-' rather than '/' between chunk name and sequence name,
 #        # mainly because the rdflib_web browser tool goes nuts if you have
@@ -116,22 +131,19 @@ class BaserockSoftwareNamespace(helpers.SoftwareNamespace):
 #        chunk_name = os.path.basename(chunk_uriref)
 #        return self.term('commands/' + chunk_name + '-' + sequence_name)
 
-    def stratum(self, stratum_name):
-        return self.group('strata/' + stratum_name)
+    def stratum(self, system_source_uriref, stratum_name):
+        assert isinstance(system_source_uriref, rdflib.URIRef)
+        return system_source_uriref + '/' + stratum_name
 
-    def stratum_artifact(self, stratum_uriref, artifact_name):
-        assert isinstance(stratum_uriref, rdflib.URIRef)
-        return stratum_uriref + '/products/' + artifact_name
+    def stratum_artifact(self, system_artifact_uriref, stratum_artifact_name):
+        assert isinstance(system_artifact_uriref, rdflib.URIRef)
+        return system_artifact_uriref + '/' + stratum_artifact_name
 
     def system(self, system_name):
-        return self.group('systems/' + system_name)
+        return self.build_instructions(system_name)
 
     def system_artifact(self, system_name, artifact_name):
-        return self.group('systems/' + system_name + '-' + artifact_name)
-
-#    def system_deployment(self, cluster_uriref, label):
-#        assert isinstance(cluster_uriref, rdflib.URIRef)
-#        return cluster_uriref + '/' + label
+        return self.group(system_name + '-' + artifact_name)
 
 
 def ordered(graph, value_list, list_uriref=None):
@@ -182,11 +194,14 @@ class BaserockDefinitionsImporter():
         self.graph = rdflib.Graph()
         self.graph.bind('software', SOFTWARE)
 
+        self.parsed_files = {}
+
     def new_resource(self, uriref, types=[]):
         '''Create a new resource, stored in 'graph' and identified by 'uriref'.
 
         Returns an rdflib.resource.Resource instance which can be used to query
-        and update the information about the resource that is stored in 'graph'.
+        and update the information about the resource that is stored in
+        'graph'.
 
         '''
         entity = self.graph.resource(uriref)
@@ -194,7 +209,8 @@ class BaserockDefinitionsImporter():
             entity.set(RDF.type, rdf_type)
         return entity
 
-    def artifacts_for_stratum(self, source_name, include_list=[]):
+    def artifacts_for_stratum(self, system_artifact_uriref, source_name,
+                              include_list=[]):
         # FIXME: need to include all strata if 'include_list' isn't passed,
         # which is difficult because they might not all be loaded yet ...
         # so for now I cheat and just assume -runtime and -devel. If there
@@ -207,7 +223,7 @@ class BaserockDefinitionsImporter():
         result = []
         for artifact in include_list:
             artifact_uriref = self.ns.stratum_artifact(
-                self.ns.stratum(source_name), artifact)
+                system_artifact_uriref, artifact)
             result.append(artifact_uriref)
         return result
 
@@ -231,65 +247,58 @@ class BaserockDefinitionsImporter():
             result.append(artifact_uriref)
         return result
 
-    def load_all_morphologies(self, path='.'):
-        '''Load Baserock Definitions serialisation format V5 as an RDFLib 'graph'.
+    def load_all_morphologies(self, path='.', limit_architectures=None):
+        '''Load Baserock Definitions serialisation format V7 as an RDFLib 'graph'.
 
         This code does very little validation, so the 'graph' that it returns
         may not fully make sense according to the Baserock data model.
 
         '''
         logging.info('Parsing .morph files...')
+
+        with open(os.path.join(path, 'VERSION')) as f:
+            data = yaml.load(f)
+            version = data['version']
+
+        logging.info("Definitions version: %i", version)
+
+        defaults = self.load_defaults(path)
+
+        systems = []
+
+        toplevel_path = path
         for dirname, dirnames, filenames in os.walk(path):
             if '.git' in dirnames:
                 dirnames.remove('.git')
             for filename in sorted(filenames):
                 if filename.endswith('.morph'):
-                    try:
-                        self.load_morph(path, os.path.join(dirname, filename))
-                    except KeyError as e:
-                        raise RuntimeError("Error while loading %s: %s" % (filename, e))
+                    path = os.path.join(dirname, filename)
+                    if path not in self.parsed_files:
+                        try:
+                            contents = parse_morph_file(path)
+                            self.parsed_files[path] = contents
+                            if contents['kind'] == 'system':
+                                systems.append(path)
+                        except Exception as e:
+                            raise RuntimeError("Error while loading %s: %r" %
+                                               (filename, e))
+
+        for system_filename in systems:
+            contents = self.parsed_files[system_filename]
+            arch = contents['arch']
+            if limit_architectures is None or arch in limit_architectures:
+                self.add_system(toplevel_path, contents, defaults)
 
         return self.graph
 
-    def load_morph(self, toplevel_path, filename):
-        try:
-            contents = parse_morph_file(filename)
-        except Exception as e:
-            warnings.warn("Problem loading %s: %s" % (filename, e))
-
-        entity = None
-
-        if contents['kind'] == 'chunk':
-            #chunk_uriref = self.ns.chunk(contents['name'])
-            #entity = chunk = new_resource(graph, chunk_uriref, BASEROCK.Chunk)
-
-            #def set_command_sequence(resource, name):
-            #    if name in contents:
-            #        property = BASEROCK.term(to_property(name))
-            #        list_node = self.ns.command_sequence(resource.identifier, name)
-            ##        resource.set(property,
-            #                     ordered(graph, contents[name], list_node))
-
-            #set_command_sequence(chunk, 'pre-configure-commands')
-            #set_command_sequence(chunk, 'configure-commands')
-            #set_command_sequence(chunk, 'post-configure-commands')
-            ##set_command_sequence(chunk, 'pre-build-commands')
-            #set_command_sequence(chunk, 'build-commands')
-            #set_command_sequence(chunk, 'post-build-commands')
-            #set_command_sequence(chunk, 'pre-install-commands')
-            #set_command_sequence(chunk, 'install-commands')
-            #set_command_sequence(chunk, 'post-install-commands')
-            pass
-
-        elif contents['kind'] == 'stratum':
-            self.process_stratum(toplevel_path, contents)
-
-        elif contents['kind'] == 'system':
-            self.process_system(contents)
-
-        elif contents['kind'] == 'cluster':
-            # Clusters are ignored.
-            pass
+    def load_defaults(self, path):
+        defaults_file = os.path.join(path, 'DEFAULTS')
+        if os.path.exists(defaults_file):
+            with open(defaults_file) as f:
+                defaults = yaml.load(f)
+        else:
+            defaults = {}
+        return defaults
 
         #if 'description' in contents:
         #    entity.set(DUBLIN_CORE.description,
@@ -299,22 +308,64 @@ class BaserockDefinitionsImporter():
         # you could manually find every line from the YAML that starts with a
         # '#' and dump that into a property. Or ruamel.yaml might help?
 
-    def process_stratum(self, toplevel_path, contents):
-        source_uriref = self.ns.stratum(contents['name'])
-        entity = source = self.new_resource(
+    def add_system(self, toplevel_path, contents, defaults):
+        source_uriref = self.ns.system(contents['name'])
+        source = self.new_resource(
+            source_uriref, types=[SOFTWARE.BuildInstructions])
+
+        artifact_uriref = self.ns.system_artifact(contents['name'], 'rootfs')
+        artifact = self.new_resource(
+            artifact_uriref,
+            types=[SOFTWARE.Group, SOFTWARE.ExecutableArtifact])
+
+        arch = contents['arch']
+
+        source.set(SOFTWARE.producesArtifact, artifact)
+        artifact.set(SOFTWARE.forArchitecture, rdflib.Literal(arch))
+
+        for entry in contents.get('strata', []):
+            stratum_file = os.path.join(toplevel_path, entry['morph'])
+            contents = self.parsed_files[stratum_file]
+
+            stratum_source = self.add_stratum(
+                toplevel_path, contents, source_uriref, artifact_uriref,
+                defaults)
+
+            # All the artifacts need to be created even if they aren't included
+            # in the final system, because something might build-depend on
+            # them.
+            stratum_artifacts = self.add_stratum_artifacts(
+                toplevel_path, contents, stratum_source, artifact_uriref,
+                arch, defaults)
+
+            stratum_artifacts = self.artifacts_for_stratum(
+                artifact_uriref, entry['name'], include_list=entry.get('artifacts'))
+            for stratum_artifact in stratum_artifacts:
+                artifact.add(SOFTWARE.containsArtifact,
+                             stratum_artifact)
+
+    def add_stratum(self, toplevel_path, contents, system_source_uriref,
+                    system_artifact_uriref, defaults):
+        source_uriref = self.ns.stratum(system_source_uriref, contents['name'])
+        source = self.new_resource(
             source_uriref, types=[SOFTWARE.BuildInstructions])
 
         for entry in contents.get('build-depends', []):
             build_dep_file = os.path.join(toplevel_path, entry['morph'])
             build_dep_name = get_name_from_morph_file(build_dep_file)
-            build_dep_artifacts = self.artifacts_for_stratum(build_dep_name)
+            build_dep_artifacts = self.artifacts_for_stratum(
+                system_artifact_uriref, build_dep_name)
             for build_dep_uriref in build_dep_artifacts:
                 source.add(SOFTWARE.buildRequires, build_dep_uriref)
 
+        return source
+
+    def add_stratum_artifacts(self, toplevel_path, contents, source,
+                              system_artifact_uriref, arch, defaults):
         artifacts = []
         for entry in contents.get('products', []):
             artifact_uri = self.ns.stratum_artifact(
-                source_uriref, entry['artifact'])
+                system_artifact_uriref, entry['artifact'])
             artifact = self.new_resource(
                 artifact_uri, types=[SOFTWARE.Group, SOFTWARE.Artifact])
             if 'include' in entry:
@@ -322,25 +373,11 @@ class BaserockDefinitionsImporter():
                 # rules against all the chunks that exist.
                 warnings.warn(
                     "Ignoring 'include' list for %s" % artifact_uri)
+            artifact.set(SOFTWARE.forArchitecture, rdflib.Literal(arch))
             artifacts.append(artifact)
             source.add(SOFTWARE.producesArtifact, artifact)
 
         for entry in contents.get('chunks', []):
-            if 'morph' in entry:
-                chunk_file = os.path.join(toplevel_path, entry['morph'])
-                chunk_name = get_name_from_morph_file(chunk_file)
-                if chunk_name != entry['name']:
-                    warnings.warn(
-                        "Chunk name %s in stratum %s doesn't match "
-                        "name from %s" % (entry['name'], source_uriref,
-                                          entry['morph']))
-            else:
-                chunk_name = entry['name']
-
-            chunk_source_uriref = self.ns.chunk(source_uriref, chunk_name)
-            chunk_source = self.new_resource(
-                chunk_source_uriref, types=[SOFTWARE.BuildInstructions])
-
             # FIXME: these are Baserock-specific parameters... what to
             # do? Set them in Baserock prefix for Baserock build tools
             # to handle!
@@ -349,30 +386,48 @@ class BaserockDefinitionsImporter():
             #chunk_ref.set(BASEROCK.prefix,
             #          rdflib.Literal(entry.get('prefix', '/usr')))
 
-            # 
+            for artifact in artifacts:
+                if 'morph' in entry:
+                    chunk_file = os.path.join(toplevel_path, entry['morph'])
+                    chunk_name = get_name_from_morph_file(chunk_file)
+                    if chunk_name != entry['name']:
+                        warnings.warn(
+                            "Chunk name %s in stratum %s doesn't match "
+                            "name from %s" % (entry['name'], source.identifier,
+                                              entry['morph']))
 
-            for stratum_artifact in artifacts:
+                    chunk_contents = self.parsed_files[chunk_file]
+                    chunk_source = self.add_chunk(
+                        rdflib.URIRef(source.identifier), chunk_contents, arch)
+                else:
+                    chunk_name = entry['name']
+                    chunk_contents = None
+                    chunk_source = self.generate_chunk_morph(
+                        rdflib.URIRef(source.identifier), chunk_name,
+                        entry['build-system'], defaults)
+
                 for entry_dep in entry.get('build-depends', []):
                     build_dep_artifacts = self.artifacts_for_chunk(
-                        rdflib.URIRef(stratum_artifact.identifier),
+                        rdflib.URIRef(artifact.identifier),
                         entry_dep)
                     for build_dep_artifact in build_dep_artifacts:
                         build_dep_uriref = self.ns.chunk_artifact(
-                            rdflib.URIRef(stratum_artifact.identifier),
+                            rdflib.URIRef(artifact.identifier),
                             build_dep_artifact)
                         chunk_source.set(
                             SOFTWARE.BuildRequires, build_dep_uriref)
 
                 # FIXME: need to honour the splitting rules here
-                chunk_artifacts = self.artifacts_for_chunk(
-                    stratum_artifact.identifier, chunk_name)
+                chunk_artifacts = self.add_chunk_artifacts(
+                    chunk_source, artifact.identifier, chunk_name, chunk_contents, arch)
 
                 for chunk_artifact in chunk_artifacts:
                     repo_uriref = self.ns.git_repository(entry['repo'])
                     repo = self.new_resource(
                         repo_uriref, types=[SOFTWARE.GitRepository])
 
-                    commit_uriref = self.ns.git_object(repo_uriref, entry['ref'])
+                    commit_uriref = self.ns.git_object(
+                        repo_uriref, entry['ref'])
                     commit = self.new_resource(
                         commit_uriref,
                         types=[SOFTWARE.GitObject, SOFTWARE.Source])
@@ -386,40 +441,66 @@ class BaserockDefinitionsImporter():
                         # parsed as a floating point number by PyYAML.
                         comment = 'unpetrify-ref:%s' % entry['unpetrify-ref']
                         commit.set(SOFTWARE.hasComment,
-                                    rdflib.Literal(comment))
+                                   rdflib.Literal(comment))
 
-                    stratum_artifact.add(
+                    chunk_artifact.set(SOFTWARE.source, commit)
+
+                    artifact.add(
                         SOFTWARE.containsArtifact, chunk_artifact)
 
-    def process_system(self, contents):
-        source_uriref = self.ns.system(contents['name'])
-        entity = source = self.new_resource(
-            source_uriref, types=[SOFTWARE.BuildInstructions])
+    def add_chunk(self, stratum_source_uriref, contents, arch):
+        source_uriref = self.ns.chunk(stratum_source_uriref, contents['name'])
+        source = self.new_resource(source_uriref,
+                                   types=[SOFTWARE.BuildInstructions])
+        return source
 
-        artifact_uriref = self.ns.system_artifact(contents['name'], 'rootfs')
-        artifact = self.new_resource(
-            artifact_uriref,
-            types=[SOFTWARE.Group, SOFTWARE.ExecutableArtifact])
+    def add_chunk_artifacts(self, source, stratum_artifact_uriref, chunk_name, contents, arch):
+        # FIXME: need to honour the splitting rules here
+        if contents is not None and chunk_name != contents['name']:
+            warnings.warn("Chunk name %s doesn't match name %s in stratum %s" %
+                          (chunk_name, contents['name'],
+                           stratum_artifact_uriref))
+        artifact_urirefs = self.artifacts_for_chunk(stratum_artifact_uriref, chunk_name)
+        artifacts = []
+        for artifact_uriref in artifact_urirefs:
+            artifact = self.new_resource(artifact_uriref,
+                                         types=[SOFTWARE.Artifact])
+            artifact.set(SOFTWARE.forArchitecture, rdflib.Literal(arch))
+            artifacts.append(artifact)
+            source.set(SOFTWARE.produces, artifact)
 
-        source.set(SOFTWARE.producesArtifact, artifact)
-        artifact.set(SOFTWARE.forArchitecture, rdflib.Literal(contents['arch']))
+        return artifacts
+        #def set_command_sequence(resource, name):
+        #    if name in contents:
+        #        property = BASEROCK.term(to_property(name))
+        #        list_node = self.ns.command_sequence(resource.identifier, name)
+        ##        resource.set(property,
+        #                     ordered(graph, contents[name], list_node))
 
-        for entry in contents.get('strata', []):
-            stratum_artifacts = self.artifacts_for_stratum(
-                entry['name'], include_list=entry.get('artifacts'))
-            for stratum_artifact_uriref in stratum_artifacts:
-                artifact.add(
-                    SOFTWARE.containsArtifact, stratum_artifact_uriref)
+        #set_command_sequence(chunk, 'pre-configure-commands')
+        #set_command_sequence(chunk, 'configure-commands')
+        #set_command_sequence(chunk, 'post-configure-commands')
+        ##set_command_sequence(chunk, 'pre-build-commands')
+        #set_command_sequence(chunk, 'build-commands')
+        #set_command_sequence(chunk, 'post-build-commands')
+        #set_command_sequence(chunk, 'pre-install-commands')
+        #set_command_sequence(chunk, 'install-commands')
+        #set_command_sequence(chunk, 'post-install-commands')
+
+    def generate_chunk_morph(self, stratum_uriref, chunk_name, buildsystem, defaults):
+        chunk_uriref = self.ns.chunk(stratum_uriref, chunk_name)
+        chunk = self.new_resource(chunk_uriref,
+                                  types=[SOFTWARE.BuildInstructions])
+
+        return chunk
 
 
 def main():
     args = argument_parser().parse_args()
 
     # FIXME: validate against schemas if present!
-    # and check VERSION and DEFAULTS!
-
     graph = BaserockDefinitionsImporter(args.output_location).load_all_morphologies(
-        path=args.input_location)
+        path=args.input_location, limit_architectures=args.architectures)
 
     #sys.stdout.write(helpers.serialize_to_json_ld(graph).decode('utf8'))
     sys.stdout.write(helpers.serialize_to_rdfxml(graph).decode('utf8'))

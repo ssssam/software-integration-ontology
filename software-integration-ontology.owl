@@ -114,7 +114,7 @@
 :hasRuntimeDependency a owl:ObjectProperty ;
   rdfs:comment "An artifact cannot function unless this other artifact is present in the same filesystem at a known path." ;
   rdfs:domain :ExecutableArtifact ;
-  rdfs:range :ExecutableArtifact .
+  rdfs:range :Artifact .
 
 :architecture a owl:ObjectProperty ;
   rdfs:comment "The type of computer that a given executable artifact expects to run on." ;

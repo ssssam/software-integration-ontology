@@ -128,7 +128,7 @@
   # The dbpedia 'computing platform' term is similar:
   # http://dbpedia.org/ontology/computingPlatform
 
-:process a owl:ObjectProperty ;
+:produces a owl:ObjectProperty ;
   rdfs:comment "Indicate what build instructions produces/produced an artifact." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :Artifact .

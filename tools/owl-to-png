@@ -1,0 +1,31 @@
+#!/bin/sh
+
+if [ "$#" -ne 2 ]; then
+    echo >&2 "Usage: $0 <INPUT> <OUTPUT>"
+    exit 1
+fi
+
+# RDF query to filter the input OWL data to give just
+# subclass and equivalent-class relationships.
+
+FILTER_QUERY="\
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    CONSTRUCT { ?s ?p ?o }
+    WHERE { ?s ?p ?o .
+            { ?s rdfs:subClassOf ?o } UNION
+            { ?s owl:equivalentClass ?o } } "
+
+# This pipeline executes the query to filter the OWL data using `roqet` (from
+# Rasqal), then renders it as a GraphViz graph (.dot file) using `rapper` from
+# Raptor2), then renders the graph as a PNG using GraphViz (`dot`).
+
+# The namespace prefixing is quite a hack! Not sure if there's a better way. We
+# should just be able to specify the namespace prefixes in the RDFXML file.
+
+roqet --format turtle --data $1 --exec "$FILTER_QUERY"  --results rdfxml | \
+    sed -e "s@http://baserock.org/definitions/example-schema#@sio:@" | \
+    rapper - http://baserock.org/definitions/example-schema#  -o dot | \
+    dot -Tpng -o "$2"

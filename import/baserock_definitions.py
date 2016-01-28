@@ -34,6 +34,7 @@ import argparse
 import logging
 import os
 import sys
+import urllib.parse
 import warnings
 
 import helpers
@@ -186,12 +187,19 @@ def to_property(name):
 
 class BaserockDefinitionsImporter():
     def __init__(self, base_uri):
+        self.validate_base_uri(base_uri)
+
         self.ns = BaserockSoftwareNamespace(base_uri)
 
         self.graph = rdflib.Graph()
         self.graph.bind('software', SOFTWARE)
 
         self.parsed_files = {}
+
+    def validate_base_uri(self, base_uri):
+        parts = urllib.parse.urlsplit(base_uri)
+        if len(parts.scheme) == 0:
+            raise RuntimeError("Invalid base URI: %s" % base_uri)
 
     def new_resource(self, uriref, types=[]):
         '''Create a new resource, stored in 'graph' and identified by 'uriref'.

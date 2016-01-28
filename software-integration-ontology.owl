@@ -153,17 +153,17 @@
   rdfs:range :Artifact .
 
 :configureCommandSequence a owl:FunctionalProperty ;
-  rdfs:command "Command sequence used to configure a source code tree. For example, this might run a './configure' script with a certain set of options." ;
+  rdfs:comment "Command sequence used to configure a source code tree. For example, this might run a './configure' script with a certain set of options." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :CommandSequence .
 
 :buildCommandSequence a owl:FunctionalProperty ;
-  rdfs:command "Command sequence used to build a source code tree, after any configure commands have been run. For example, this might run `make`." ;
+  rdfs:comment "Command sequence used to build a source code tree, after any configure commands have been run. For example, this might run `make`." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :CommandSequence .
 
 :installCommandSequence a owl:FunctionalProperty ;
-  rdfs:command "Command sequence used to install a source code tree into a destination directory, after any configure and build commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
+  rdfs:comment "Command sequence used to install a source code tree into a destination directory, after any configure and build commands have been run. For example, this might run `make install DESTDIR=$DESTDIR`." ;
   rdfs:domain :BuildInstructions ;
   rdfs:range :CommandSequence .
 

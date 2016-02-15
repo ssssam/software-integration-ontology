@@ -1,4 +1,4 @@
-# Copyright (C) 2015  Codethink Limited
+# Copyright 2015-2016  Codethink Limited
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,12 +13,11 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# Working title: the "software integration ontology". First draft.
+# Working title: the "software integration ontology".
 #
 # This is intended as a BASE vocabulary for software build & integration
 # instructions. Real build tools will have to make at a few extensions in
 # order to have actual working build instructions.
-
 
 # Partial OWL and RDF Schema glossary:
 #
@@ -35,7 +34,7 @@
 #   a property which can only have one resource per value
 
 # This ontology.
-@prefix : <http://baserock.org/definitions/example-schema#> .
+@prefix : <http://baserock.org/software-integration-ontology#> .
 
 # Resource Description Framework: basic primitives.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -58,52 +57,63 @@
 # Software Package Data Exchange: describes software licensing.
 @prefix spdx: <http://spdx.org/rdf/terms#> .
 
-#####################
-### LEVEL 1 Classes
-#####################
+# There are three main 'dimensions' to this data model. The first axis is the
+# *build process*: source goes in, binaries come out. The second axis is
+# grouping: for example, source code is represented files, which are grouped
+# into packages. The third axis is containment: source files are contained in
+# version control repos, packages are contained in package repos, etc.
 
-:Artifact a owl:Class ;
-  # This includes OSTree trees, Git trees, normal filesystem tres, individual
-  # files, ...
-  rdfs:comment "A file or set of files that is interesting for some reason." .
+#####################
+## 1. Build process
+#####################
 
 :Source a owl:Class ;
-  # I don't know how useful it is to consider source code a type
-  # of artifact, but in abstract terms it seems correct. I can't see where to
-  # draw a line to say "this is source code" vs. "this is a built artifact",
-  # because some source code can be executed without any kind of "build"
-  # process.
-  rdfs:subClassOf :Artifact ;
-  rdfs:comment "A repository of source code." .
+  rdfs:comment "Data in a form that humans will read and write. The input to a 'build' process." .
 
-:ExecutableArtifact a owl:Class ;
-  rdfs:subClassOf :Artifact ;
-  rdfs:comment "A file or set of files that can be executed on a computer. This includes programs, libraries and operating systems." .
+:Binary a owl:Class ;
+  rdfs:comment "Data in a form that a computer program will process or execute. The output of a 'build' process." .
 
-:Group a owl:Class ;
-  rdfs:subClassOf :Artifact ;
-  rdfs:comment "A set of artifacts that are grouped together for some reason." .
+:Intermediate a owl:Class ;
+  rdfs:comment "Data that is useful during the BuildProcess, but not before or after." .
 
-:BuildInstructions a owl:Class ;
-  rdfs:comment "Describes how to produce an artifact from some source." .
+# Nothing can be both Source and Binary. Some files pass through the build
+# process without being transformed, but the output file should still be
+# considered a different file to the input file. Use the Intermediate class
+# for files that are generated as part of the build process but are not
+# useful in themselves.
+:Source owl:disjointWith :Binary .
+:Binary owl:disjointWith :Source .
 
-:CommandSequence a owl:Class ;
-  rdfs:subClassOf :BuildInstructions ;
-  rdfs:comment "A sequence of commands that should be executed in order." .
+:BuildProcess a owl:Class ;
+  rdfs:comment "The steps to produce a binary artifact from some source." .
 
-########################
-### LEVEL 1 Properties
-########################
+# There is only one type of "requirement" considered in this data model. In the
+# real world you usually need to distinguish between whether something is a
+# build-time requirement (e.g. foo.c requires foo.h) or a runtime requirement
+# (e.g. foo-app requires libfoo.so). In this data model that information is
+# implicit. If a :Binary requires something then it must be a runtime
+# dependency. If a :Source or :BuildProcess requires something then it must be
+# a built time dependency. Of course, anything required by a :Source is
+# required by whatever process needs to build that source.
+:requires a owl:ObjectProperty ;
+  rdfs:comment "A build-time or runtime requirement between two components." ;
+  rdfs:domain [ :Source, :Intermediate, :Binary, :BuildProcess ] ;
+  rdfs:range [ :Source, :Intermediate, :Binary ] .
 
-:location a owl:DatatypeProperty ;
-  rdfs:comment "A location that an artifact can be fetched from." ;
-  rdfs:domain :Artifact ;
-  # FIXME: there's probably a URL type we can use already ...
-  rdfs:range xsd:string .
+:required-by a owl:ObjectProperty ;
+  owl:inverseOf :requires.
+
+:produces a owl:ObjectProperty ;
+  rdfs:comment "Indicates the output of a build process." ;
+  rdfs:domain [ :Source, :Intermediate, :BuildProcess ] ;
+  rdfs:range [ :Intermediate, :Binary ] .
+
+:produced-by a owl:ObjectProperty ;
+  owl:inverseOf :produces.
 
 :hasFeature a owl:ObjectProperty ;
-  rdfs:comment "An open-ended property that can be used for distinguishing between multiple variants of an artifact." ;
-  rdfs:domain :Artifact .
+  rdfs:comment "An open-ended property that can be used for distinguishing between multiple variants of a binary." ;
+  rdfs:domain :Binary .
   # No range defined at the moment, use any made up URL. E.G. when
   # distinguishing different artifacts that can be built from the source tree of
   # the Mesa graphics library, you might say ':hasFeature
@@ -111,14 +121,9 @@
   # talking about the various feature options they have, you're going to be on
   # your own with this.
 
-:hasRuntimeDependency a owl:ObjectProperty ;
-  rdfs:comment "An artifact cannot function unless this other artifact is present in the same filesystem at a known path." ;
-  rdfs:domain :ExecutableArtifact ;
-  rdfs:range :Artifact .
-
 :architecture a owl:ObjectProperty ;
   rdfs:comment "The type of computer that a given executable artifact expects to run on." ;
-  rdfs:domain :ExecutableArtifact .
+  rdfs:domain :Binary .
   # No range defined at the moment: you can use any made up URL,
   # I suggest <arch:x86_64>, <arch:armv7> etc.
   #
@@ -128,29 +133,9 @@
   # The dbpedia 'computing platform' term is similar:
   # http://dbpedia.org/ontology/computingPlatform
 
-:produces a owl:ObjectProperty ;
-  rdfs:comment "Indicate what build instructions produces/produced an artifact." ;
-  rdfs:domain :BuildInstructions ;
-  rdfs:range :Artifact .
-  # This will need extensions to actually be useful. For a GitRepository, for
-  # example, you will need a :ref property as well.
-
-:source a owl:ObjectProperty ;
-  rdfs:comment "Indicate what source code produces/produced an artifact." ;
-  rdfs:domain :Source ;
-  rdfs:range :Artifact .
-  # This will need extensions to actually be useful. For a GitRepository, for
-  # example, you will need a :ref property as well.
-
-:containsArtifact a owl:ObjectProperty ;
-  rdfs:comment "Indicates that a collection includes a given artifact." ;
-  rdfs:domain :Group ;
-  rdfs:range :Artifact .
-
-:buildRequires a owl:ObjectProperty ;
-  rdfs:comment "Indicates a dependency that must be available during a build process." ;
-  rdfs:domain :BuildInstructions ;
-  rdfs:range :Artifact .
+:CommandSequence a owl:Class ;
+  rdfs:subClassOf :BuildInstructions ;
+  rdfs:comment "A sequence of commands that should be executed in order." .
 
 :configureCommandSequence a owl:FunctionalProperty ;
   rdfs:comment "Command sequence used to configure a source code tree. For example, this might run a './configure' script with a certain set of options." ;
@@ -170,22 +155,92 @@
 :hasComment a owl:DatatypeProperty ;
   rdfs:comment "Arbitrary comments, to be used to record information that cannot be expressed using the existing ontology" .
 
-############
-## LEVEL 2
-############
+################
+## 2. Grouping
+################
+
+:File a owl:Class ;
+  # Files are currently the fundamental unit of this data model, but that may
+  # change. We could represent 'symbols', for example, which are 'contained' in
+  # files, and are grouped into 'modules', 'classes', and/or 'namespaces'.
+  rdfs:subClassOf :Component ;
+  rdfs:comment "A file on a computer storage device." .
+
+:Group a owl:Class ;
+  rdfs:subClassOf :Component ;
+  rdfs:comment "A logical grouping of resources." .
+
+# Is it OK to conflate logical containment with physical containment? Does this
+# logical/physical distinction make sense anyway?
+:contains a owl:ObjectProperty ;
+  rdfs:comment "Indicates logical or physical containment. The containment is logical if a Group contains something, physical if it is a FileTree or Repository containing something." ;
+  rdfs:domain [ :Group, :FileTree, :Repository ] ;
+  rdfs:range [ :Group, :FileTree, :Repository, :File ] .
+
+###############
+## 3. Storage
+###############
+
+# I don't like having to invent a new term for this concept, but I don't think
+# any existing terms really suit it. I considered: Archive, Commit, Directory,
+# FileSystem, Tree.
+:FileTree a owl:Class ;
+  rdfs:comment "Generic class to represent a tree of files." .
+
+# Don't assume that a Repository contains Source. It may be an OSTree repo, or
+# a Debian binary package repo, for example.
+:Repository a owl:Class ;
+  rdfs:comment "Generic class to represent a 'repository', which can contain multiple FileTrees.".
 
 :GitRepository a owl:Class ;
   # This is not a Source, it's a really a Group but there's not much
   # use in treating it as such.
-  rdfs:comment "A Git repository containing commits & trees." .
+  rdfs:subClassOf :Repository .
 
 :GitObject a owl:Class ;
-  rdfs:subClassOf :Source ;
+  rdfs:subClassOf :FileTree ;
   rdfs:comment "A specific commit or tree in a Git repository, identified by a SHA1 hash." .
 
 :Tarball a owl:Class ;
-  rdfs:subClassOf :Source ;
+  rdfs:subClassOf :FileTree ;
   rdfs:comment "Files stored as a tarball." .
+
+:location a owl:DatatypeProperty ;
+  rdfs:comment "A location that an artifact can be fetched from." ;
+  rdfs:domain  [ :File, :FileTree, :Repository ] ;
+  # FIXME: there's probably a URL type we can use already ...
+  rdfs:range xsd:string .
+
+# As interesting as the terms that we include are the terms that we don't
+# include, to avoid contradicting existing definitions.
+#
+# Component:
+#
+#   - Defined in "Large-Scale C++ Software Design" by John Lakos (1996) as "the
+#     smallest unit of physical design", which is useful, but also as "exactly
+#     one header (.h) file and one implementation (.c) file", which is too C/C++
+#     specific to be useful in a general purpose data model.
+#
+# Package:
+#
+#   - In Apple's OS X operating system, a package is a file system directory
+#     that gets displayed to the user as a single file.
+#   - In Python, a package is more or less a directory that contains modules
+#     (which are files) and/or other Python packages.
+#   - In Software Package Data Exchange (SPDX) a package is any collection of
+#     files
+#   - In Unified Modelling Language (UML) a package is an abstract logical
+#     grouping used "to group elements, and to provide a namespace for the
+#     grouped elements".
+#   - Many package management tools (especially on GNU/Linux operating systems)
+#     treat a package as a discrete component that can be installed, removed
+#     or upgraded to a new version while the system is running.
+#   - In "Large-Scale C++ Software Design", a package is "a collection of
+#     components organized as a physically cohesive unit", and has a prefix
+#     associated with it that should be preprended to all symbols within that
+#     package. Lakos also defines "package groups", as "a collection of
+#     packages organized as a physically cohesive unit".
+#
 
 # References to Dublin Core (dc), which is a set of very common properties 
 
@@ -204,7 +259,7 @@
 # References to Description of a Project (DOAP), which is a vocabulary for
 # talking about projects (usually software development projects).
 
-:Source owl:equivalentClass doap:Repository .
+:Repository owl:equivalentClass doap:Repository .
 
 :GitRepository owl:equivalentClass doap:GitRepository .
 
@@ -225,7 +280,7 @@
 # vocabulary for representing licenses and distribution rights for source code
 # and artifacts.
 
-:Artifact owl:equivalentClass spdx:Package .
+:Group owl:equivalentClass spdx:Package .
 
 # I've not linked to the Software Ontology because all of the URIs I can find
 # are totally unreadable. The URI for the 'software' class, for example, seems

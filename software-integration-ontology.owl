@@ -100,16 +100,33 @@
   rdfs:domain [ :Source, :Intermediate, :Binary, :BuildProcess ] ;
   rdfs:range [ :Source, :Intermediate, :Binary ] .
 
-:required-by a owl:ObjectProperty ;
-  owl:inverseOf :requires.
+#:required-by a owl:ObjectProperty ;
+#  owl:inverseOf :requires.
+
+# These might be useful if you "combine" equivalent Source, Binary and
+# BuildProcess resources together. It would be *valid* to include them in
+# this ontology, but since there's no way to describe a "combined" Package
+# concept using this ontology, it doesn't make sense to include ways of
+# describing relationships that are only needed when describing "combined"
+# packages.
+
+#:build-requires a owl:ObjectProperty ;
+#  rdfs:subPropertyOf :requires ;
+#  rdfs:domain [ :Source, :Intermediate, :BuildProcess ]
+#  rdfs:range [ :Source, :Intermediate, :Binary ]
+#
+#:runtime-requires a owl:ObjectProperty ;
+#  rdfs:subPropertyOf :requires ;
+#  rdfs:domain [ :Intermediate, :Binary, :BuildProcess ] ;
+#  rdfs:range [ :Intermediate, :Binary ] .
 
 :produces a owl:ObjectProperty ;
   rdfs:comment "Indicates the output of a build process." ;
   rdfs:domain [ :Source, :Intermediate, :BuildProcess ] ;
   rdfs:range [ :Intermediate, :Binary ] .
 
-:produced-by a owl:ObjectProperty ;
-  owl:inverseOf :produces.
+#:produced-by a owl:ObjectProperty ;
+#  owl:inverseOf :produces.
 
 :hasFeature a owl:ObjectProperty ;
   rdfs:comment "An open-ended property that can be used for distinguishing between multiple variants of a binary." ;
@@ -176,6 +193,9 @@
   rdfs:comment "Indicates logical or physical containment. The containment is logical if a Group contains something, physical if it is a FileTree or Repository containing something." ;
   rdfs:domain [ :Group, :FileTree, :Repository ] ;
   rdfs:range [ :Group, :FileTree, :Repository, :File ] .
+
+#:contained-in a owl:ObjectProperty ;
+#  owl:inverseOf :contains .
 
 ###############
 ## 3. Storage
@@ -286,4 +306,3 @@
 # are totally unreadable. The URI for the 'software' class, for example, seems
 # to be <http://www.ebi.ac.uk/swo/SWO_0000001>. You can browse it all here if
 # you are interested: <http://bioportal.bioontology.org/ontologies/SWO>.
-

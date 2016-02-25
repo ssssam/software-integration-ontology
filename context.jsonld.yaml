@@ -1,0 +1,42 @@
+# JSON-LD context for data using the Software Integration Ontology terms.
+#
+# The JSON-LD serialisation format allows representing Linked Data in such a
+# way that it is practical to directly read and write. The main mechanism for
+# this is the 'context', which maps short property names to the corresponding
+# full URIs. See <https://www.w3.org/TR/json-ld/#the-context> for more info.
+#
+# FIXME: link to examples of how to use this context effectively.
+#
+# The context is maintained as a YAML file, which is converted to JSON using
+# this command:
+#
+#  python3 -c 'import json,yaml;d=yaml.load(open("context.jsonld.yaml","r"));print(json.dumps(d,indent=4,sort_keys=True))' > context.jsonld
+---
+'@context':
+  sw: 'http://baserock.org/software-integration-ontology#'
+
+  'contains':
+      '@id': 'sw:contains'
+      '@type': '@id'
+  'produces':
+      '@id': 'sw:produces'
+      '@type': '@id'
+  'requires':
+      '@id': 'sw:requires'
+      '@type': '@id'
+
+  # These 'human-readable' names are not just important here.
+  #
+  # We use these types as labels in Neo4J. ':' is a special character
+  # in the Cypher query language. You can escape using ` characters, but
+  # it's an extra pain.
+  'Binary': 'sw:Binary'
+  'BuildProcess': 'sw:BuildProcess'
+  'File': 'sw:File'
+  'FileTree': 'sw:FileTree'
+  'Intermediate': 'sw:Intermediate'
+  'Package': 'sw:Package'
+  'Repository': 'sw:Repository'
+  'Source': 'sw:Source'
+
+  'name': 'https://schema.org/name'

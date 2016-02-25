@@ -1,0 +1,26 @@
+{
+    "@context": {
+        "Binary": "sw:Binary",
+        "BuildProcess": "sw:BuildProcess",
+        "File": "sw:File",
+        "FileTree": "sw:FileTree",
+        "Intermediate": "sw:Intermediate",
+        "Package": "sw:Package",
+        "Repository": "sw:Repository",
+        "Source": "sw:Source",
+        "contains": {
+            "@id": "sw:contains",
+            "@type": "@id"
+        },
+        "name": "https://schema.org/name",
+        "produces": {
+            "@id": "sw:produces",
+            "@type": "@id"
+        },
+        "requires": {
+            "@id": "sw:requires",
+            "@type": "@id"
+        },
+        "sw": "http://baserock.org/software-integration-ontology#"
+    }
+}

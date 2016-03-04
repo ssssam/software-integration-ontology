@@ -1,0 +1,36 @@
+// This is a manually maintained diagram of the *process*
+// part of the software integration ontology.
+
+
+digraph software_integration_ontology {
+  label = "Software integration data model"
+
+  subgraph cluster_file {
+    label = "File";
+
+    "Binary file"
+    "Intermediate file"
+    "Source file";
+    "File build process";
+  }
+
+  subgraph cluster_package {
+    label = "Package";
+
+    "Binary package"
+    "Source package";
+    "Package build process";
+  }
+
+  "File build process" -> "Source file" [label = "requires"];
+  "Package build process" -> "Source package" [label = "requires"];
+
+  "File build process" -> "Intermediate file" [label = "produces"];
+  "Intermediate file" -> "File build process" [label = "requires"];
+
+  "File build process" -> "Binary file" [label = "produces"];
+  "Package build process" -> "Binary package" [label = "produces"];
+
+  "Source package" -> "Source file" [label = "contains" ];
+  "Binary package" -> "Binary file" [label = "contains" ];
+}

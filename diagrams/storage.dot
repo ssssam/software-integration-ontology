@@ -1,0 +1,29 @@
+// This is a manually maintained diagram of the *process*
+// part of the software integration ontology.
+
+digraph software_integration_ontology_storage {
+  label = "Software integration data model -- storage"
+
+  subgraph cluster_generic {
+    label = "";
+    "File tree";
+    "Repository";
+
+    "Repository" -> "File tree" [label="contains"];
+  }
+
+  subgraph cluster_git {
+    label = "Git";
+    "File tree" -> "Git object" [label="subclass of"];
+    "Repository" -> "Git repository" [label="subclass of"];
+
+    "Git repository" -> "Git object" [label="contains"];
+  }
+
+  subgraph cluster_tarball {
+    label = "Tarball";
+    "File tree" -> "Tarball" [label="subclass of"];
+  }
+
+  "File tree" -> "File" [label="contains"];
+}

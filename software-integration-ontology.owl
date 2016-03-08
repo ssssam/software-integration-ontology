@@ -95,6 +95,10 @@
 # dependency. If a :Source or :BuildProcess requires something then it must be
 # a built time dependency. Of course, anything required by a :Source is
 # required by whatever process needs to build that source.
+#
+# Also note that :requires is 'private', not 'transitive'. If a library
+# links to symbols from the ATK and GTK libraries, it :requires both, even
+# though GTK itself :requires ATK.
 :requires a owl:ObjectProperty ;
   rdfs:comment "A build-time or runtime requirement between two components." ;
   rdfs:domain [ :Source, :Intermediate, :Binary, :BuildProcess ] ;

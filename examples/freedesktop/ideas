@@ -1,0 +1,32 @@
+"freedesktop" "stack"
+
+         Apps
+
+Desktop:  GNOME  (/KDE /Solus ... /)
+Graphics: X.org  (note: Wayland is NOT equivalent: Linux takes over most roles)
+Userland: GNU    (/BSD)
+(systemd)
+Kernel:   Linux  (/BSD /Windows /OSX)
+
+Ideas for size:
+
+- number of committers (from Ohloh? )
+- number of commits (from Ohloh? )
+- Lines of code (from Ohloh, again ?)
+- number of reverse dependencies (<https://tecnocode.co.uk/2014/05/08/how-widely-is-the-gnome-stack-used/>)
+- number of symbols
+
+also: https://www.gnome.org/technologies/
+https://developer.gnome.org/platform-overview/stable/
+
+The ordering of the stack is kind of intuitive, but there is a logic behind
+it: the number of symbols from a project that are used by another project.
+For example GNU (via GLIBC) presumably consumes the most kernel symbols.
+GNOME consumes more X.org symbols than any of the other projects.
+
+Visualising the relationships using a Sankey diagram
+<https://bost.ocks.org/mike/sankey/> would be super cool.
+
+That said, *number of symbols* could be quite a meaningless measure:
+the number of times those symbols are *called* during the "normal
+operation" of the desktop environment would be useful, too ...

@@ -1,0 +1,49 @@
+# Initial data for displaying the "freedesktop.org" "stack" of software
+
+# The "follows" field is a sort of hacky manual layout algorithm,
+# for use for the time being only.
+
+---
+# JSON-LD context. If you don't care, ignore :-)
+'@context':
+  doap: http://usefulinc.com/ns/doap#
+
+  name: "doap:name"
+
+  # For linking to Black Duck Openhub.
+  # This should perhaps be added to the DOAP vocabulary itself.
+  ohloh: http://example.com/terms/ohloh
+
+
+# All resources described here are doap:Project instances
+'@type': 'doap:Project'
+
+'@graph':
+- name: Linux
+  ohloh: linux
+
+- name: GNU
+  follows: Linux
+  children:
+    - ohloh: make
+    - ohloh: gcc
+    - ohloh: glibc
+    - ohloh: grep
+    - ohloh: coreutils
+    - ohloh: tar
+    - ohloh: autoconf
+    - ohloh: automake
+    - ohloh: findutils
+    - ohloh: sed
+    - ohloh: binutils
+
+- name: X.Org
+  ohloh: x
+  follows: GNU
+
+- name: GNOME
+  ohloh: gnome
+  follows: X.org
+
+- name: Apps
+  follows: GNOME

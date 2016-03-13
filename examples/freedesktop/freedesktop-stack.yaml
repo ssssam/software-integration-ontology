@@ -43,7 +43,7 @@
 
 - name: GNOME
   ohloh: gnome
-  follows: X.org
+  follows: X.Org
 
 - name: Apps
   follows: GNOME

@@ -8,7 +8,7 @@
 
 <body>
 <form>
-    <input type="radio" name="size-metric" id="size-code-lines" checked>
+    <input type="radio" name="size-metric" id="size-code-lines">
     <label for="size-code-lines">Code lines</label><br>
     <input type="radio" name="size-metric" id="size-commits">
     <label for="size-commits">Commit count</label><br>
@@ -82,15 +82,20 @@ d3.json("freedesktop-stack.processed.json", function(error, data) {
     var projects = data['@graph'];
     var layers = projects_ordered(projects);
 
-    do_layout(layers);
-    do_document_update(layers);
-
     d3.selectAll("input[name=size-metric]")
         .data(['total_code_lines', 'total_commit_count', 'total_contributor_count'])
         .on("change", function(y_property) {
             do_layout(layers, y_property);
             do_document_update(layers);
-        });
+        })
+
+    d3.selectAll("input#size-commits")
+        .property("checked", true);
+
+    // FIXME: would be nice if the on "change" handler got called
+    // automatically here.
+    do_layout(layers, 'total_commit_count');
+    do_document_update(layers);
 });
 
 </script>

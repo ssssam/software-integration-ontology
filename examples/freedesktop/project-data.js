@@ -31,7 +31,7 @@ function projects_ordered(projects) {
             var follows = find_project(project.follows);
             if (follows.index === undefined) {
                 order.push(project);
-                project.index = order.length;
+                project.index = order.length - 1;
             } else {
                 order.splice(follows.index, 0, project);
                 project.index = follows.index + 1;

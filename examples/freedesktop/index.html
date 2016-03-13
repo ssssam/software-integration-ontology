@@ -6,6 +6,17 @@
 <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <script src="project-data.js" charset="utf-8"></script>
 
+<body>
+<form>
+    <input type="radio" name="size-metric" id="size-code-lines" checked>
+    <label for="size-code-lines">Code lines</label><br>
+    <input type="radio" name="size-metric" id="size-commits">
+    <label for="size-commits">Commit count</label><br>
+    <input type="radio" name="size-metric" id="size-contributors">
+    <label for="size-contributors">Contributor count</label><br>
+</form>
+</body>
+
 <script>
 
 "use strict";
@@ -13,37 +24,50 @@
 var width = 960,
     height = 500;
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
+var color_scale = d3.scale.category10();
 
-d3.json("freedesktop-stack.processed.json", function(error, data) {
-    if (error) throw error;
+function do_layout(layers, y_metric) {
+    y_metric = y_metric || "total_commit_count";
 
-    var projects = data['@graph'];
-    var layers = projects_ordered(projects);
+    function y_accessor(project) { return project[y_metric]; };
+
+    var max_y = d3.sum(layers, y_accessor);
+
+    var y_scale = d3.scale.linear()
+        .domain([0, max_y])
+        .range([0, height]);
+
+    console.log("max_y: ", max_y, " y_scale: ", y_scale);
 
     // I'm not sure that we really need to use a layout helper for such a
     // trivial case. It has the right name though :-)
     var stack = d3.layout.stack()
         .values(function(project) { return [ project ] })
         .x(function(project) { return 0 })
-        // FIXME: do the scaling better than this
-        .y(function(project) { return (project.total_commit_count || 100000) / 5000 });
+        .y(function(project) { return y_scale(y_accessor(project)) });
 
     stack(layers);
 
     console.log("Layers: ", layers);
+};
 
-    var color = d3.scale.category10();
+function do_document_update(layers) {
+    var selection = d3.select("body").selectAll("div.project");
 
-    var selection = svg.data(layers);
-    selection.enter().append("div")
+    var operation = selection.data(layers,
+        function(project) { return project.name } );
+
+    console.log("Enter: ", operation.enter(), ", exit: ", operation.exit(), ", update: ", operation);
+
+    operation.exit().remove();
+
+    operation.enter().append("div")
         .attr("class", "project")
-        .call(position)
         .text(function(project) { return project.name })
-        .style("background", function(project) { return color(project.name) });
-});
+        .style("background", function(project) { return color_scale(project.name) });
+
+    operation.call(position);
+}
 
 function position() {
     this.style("left", function(d) { return d.x + "px"; })
@@ -51,5 +75,22 @@ function position() {
         .style("width", function(d) { return width + "px"; })
         .style("height", function(d) { return Math.max(0, d.y - 1) + "px"; });
 };
+
+d3.json("freedesktop-stack.processed.json", function(error, data) {
+    if (error) throw error;
+
+    var projects = data['@graph'];
+    var layers = projects_ordered(projects);
+
+    do_layout(layers);
+    do_document_update(layers);
+
+    d3.selectAll("input[name=size-metric]")
+        .data(['total_code_lines', 'total_commit_count', 'total_contributor_count'])
+        .on("change", function(y_property) {
+            do_layout(layers, y_property);
+            do_document_update(layers);
+        });
+});
 
 </script>

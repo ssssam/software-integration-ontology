@@ -1,1 +1,149 @@
-{"@context": {"name": "doap:name", "doap": "http://usefulinc.com/ns/doap#", "ohloh": "http://example.com/terms/ohloh"}, "@type": "doap:Project", "@graph": [{"name": "Linux", "ohloh": "linux", "total_commit_count": 638960}, {"name": "GNU", "follows": "Linux", "children": [{"ohloh": "make", "total_commit_count": 2379}, {"ohloh": "gcc", "total_commit_count": 145154}, {"ohloh": "glibc", "total_commit_count": 29915}, {"ohloh": "grep", "total_commit_count": 1733}, {"ohloh": "coreutils", "total_commit_count": 28401}, {"ohloh": "tar", "total_commit_count": 2818}, {"ohloh": "autoconf", "total_commit_count": 6531}, {"ohloh": "automake", "total_commit_count": 8076}, {"ohloh": "findutils", "total_commit_count": 2202}, {"ohloh": "sed", "total_commit_count": 467}, {"ohloh": "binutils", "total_commit_count": 86716}], "total_commit_count": 314392}, {"name": "X.Org", "follows": "GNU", "ohloh": "x", "total_commit_count": 91372}, {"name": "GNOME", "follows": "X.Org", "ohloh": "gnome", "total_commit_count": 638670}, {"name": "Apps", "follows": "GNOME"}]}
+{
+    "@type": "doap:Project",
+    "@graph": [
+        {
+            "name": "Linux",
+            "total_contributor_count": 15391,
+            "total_code_lines": 18598857,
+            "ohloh": "linux",
+            "total_commit_count": 638960
+        },
+        {
+            "name": "GNU",
+            "children": [
+                {
+                    "total_contributor_count": 48,
+                    "total_code_lines": 37851,
+                    "ohloh": "make",
+                    "total_commit_count": 2379
+                },
+                {
+                    "total_contributor_count": 564,
+                    "total_code_lines": 7494004,
+                    "ohloh": "gcc",
+                    "total_commit_count": 145154
+                },
+                {
+                    "total_contributor_count": 375,
+                    "total_code_lines": 1243558,
+                    "ohloh": "glibc",
+                    "total_commit_count": 29915
+                },
+                {
+                    "total_contributor_count": 42,
+                    "total_code_lines": 11017,
+                    "ohloh": "grep",
+                    "total_commit_count": 1733
+                },
+                {
+                    "total_contributor_count": 190,
+                    "total_code_lines": 87198,
+                    "ohloh": "coreutils",
+                    "total_commit_count": 28401
+                },
+                {
+                    "total_contributor_count": 23,
+                    "total_code_lines": 24166,
+                    "ohloh": "tar",
+                    "total_commit_count": 2818
+                },
+                {
+                    "total_contributor_count": 107,
+                    "total_code_lines": 39610,
+                    "ohloh": "autoconf",
+                    "total_commit_count": 6531
+                },
+                {
+                    "total_contributor_count": 101,
+                    "total_code_lines": 112529,
+                    "ohloh": "automake",
+                    "total_commit_count": 8076
+                },
+                {
+                    "total_contributor_count": 34,
+                    "total_code_lines": 18269,
+                    "ohloh": "findutils",
+                    "total_commit_count": 2202
+                },
+                {
+                    "total_contributor_count": 17,
+                    "total_code_lines": 23735,
+                    "ohloh": "sed",
+                    "total_commit_count": 467
+                },
+                {
+                    "total_contributor_count": 624,
+                    "total_code_lines": 4704385,
+                    "ohloh": "binutils",
+                    "total_commit_count": 86716
+                }
+            ],
+            "total_code_lines": 13796322,
+            "follows": "Linux",
+            "total_contributor_count": 2125,
+            "total_commit_count": 314392
+        },
+        {
+            "name": "X.Org",
+            "total_code_lines": 3329240,
+            "follows": "GNU",
+            "total_contributor_count": 1250,
+            "ohloh": "x",
+            "total_commit_count": 91372
+        },
+        {
+            "name": "WebKit",
+            "total_code_lines": 5159621,
+            "follows": "X.Org",
+            "total_contributor_count": 552,
+            "ohloh": "WebKit",
+            "total_commit_count": 155172
+        },
+        {
+            "name": "GNOME",
+            "total_code_lines": 8894832,
+            "follows": "WebKit",
+            "total_contributor_count": 6380,
+            "ohloh": "gnome",
+            "total_commit_count": 638670
+        },
+        {
+            "name": "Apps",
+            "children": [
+                {
+                    "total_contributor_count": 3655,
+                    "total_code_lines": 13831234,
+                    "ohloh": "firefox",
+                    "total_commit_count": 271370
+                },
+                {
+                    "total_contributor_count": 556,
+                    "total_code_lines": 760661,
+                    "ohloh": "gimp",
+                    "total_commit_count": 36353
+                },
+                {
+                    "total_contributor_count": 1515,
+                    "total_code_lines": 7174733,
+                    "ohloh": "libreoffice",
+                    "total_commit_count": 433301
+                },
+                {
+                    "total_contributor_count": 889,
+                    "total_code_lines": 942324,
+                    "ohloh": "thunderbird",
+                    "total_commit_count": 40342
+                }
+            ],
+            "total_code_lines": 22708952,
+            "follows": "GNOME",
+            "total_contributor_count": 6615,
+            "total_commit_count": 781366
+        }
+    ],
+    "@context": {
+        "name": "doap:name",
+        "doap": "http://usefulinc.com/ns/doap#",
+        "ohloh": "http://example.com/terms/ohloh"
+    }
+}

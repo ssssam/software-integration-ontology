@@ -41,9 +41,20 @@
   ohloh: x
   follows: GNU
 
+- name: WebKit
+  ohloh: WebKit
+  follows: X.Org
+
 - name: GNOME
   ohloh: gnome
-  follows: X.Org
+  follows: WebKit
 
 - name: Apps
   follows: GNOME
+  children:
+    # This is an obviously incomplete list; the major apps should be
+    # here though.
+      - ohloh: firefox
+      - ohloh: gimp
+      - ohloh: libreoffice
+      - ohloh: thunderbird

@@ -1,1 +1,39 @@
-This is more or less a brain dump right now. Data is fun.
+# Software Integration Ontology
+
+This repo contains thoughts about a data model for representing software
+
+The main aim is to allow visualisation and analysis of large, messy codebases
+
+A secondary aim to allow converting build instructions between different
+representations.
+
+A non-goal is for data to be directly usable as build instructions. See
+[Baserock definitions format](https://docs.baserock.org/) for an attempt at
+a well-specified format for build+integration instructions.
+
+# Related projects
+
+## TOSCA
+
+TOSCA provides an [XML
+vocabulary](https://docs.oasis-open.org/tosca/TOSCA/v1.0/os/TOSCA-v1.0-os.html)
+for defining "cloud services".
+
+Most relevant is the abstract "NodeType" entity type, which represents *kinds*
+of services & applications. For example, you might have a "mysql" node, and an
+"app" node that requires "mysql". Nodes can have capabilities, requirements,
+interfaces and states, among other things.  TOSCA itself doesn't provide any
+standard terms for any of these concepts, though. A separate
+NodeTypeImplementation entity describes the actual binary artifacts that
+implement the service. These would correspond to 'software:Binary' class.
+
+"Relationships" in TOSCA correspond to the 'software:requires' property, but
+allows describing the relationship in more detail, e.g. saying that it requires
+a database connection between two nodes that is implemented in a certain way.
+The "requirements" and "capabilities" in TOSCA seem to correspond to the
+'endpoints' of a requirement, e.g. a binary might require a specific symbol,
+and another might providing it (and thus be 'capable' of it).
+
+While TOSCA looks interesting, any standardised vocabularies for TOSCA's
+concepts of "requirement", "capability", "relationship" and "artifact"
+would probably be more interesting.

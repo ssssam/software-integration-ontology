@@ -14,15 +14,15 @@ digraph software_integration_ontology_storage {
 
   subgraph cluster_git {
     label = "Git";
-    "File tree" -> "Git object" [label="subclass of"];
-    "Repository" -> "Git repository" [label="subclass of"];
+    "File tree" -> "Git object" [label="subclass"];
+    "Repository" -> "Git repository" [label="subclass"];
 
     "Git repository" -> "Git object" [label="contains"];
   }
 
   subgraph cluster_tarball {
     label = "Tarball";
-    "File tree" -> "Tarball" [label="subclass of"];
+    "File tree" -> "Tarball" [label="subclass"];
   }
 
   "File tree" -> "File" [label="contains"];

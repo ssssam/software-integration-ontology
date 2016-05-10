@@ -1,0 +1,105 @@
+This document is a list of how build tooling names things
+
+Baserock (old):
+  Workspace:
+    description: Directory containing Git checkouts of code to work on.
+    obsolete: yes
+
+  Definition:
+
+  Morphology:
+    description: Build+integration instruction
+    same-as: Definition
+
+  Cluster:
+    refers-to: System
+
+  System:
+    contains: Stratum
+
+  Stratum:
+    contains: Chunk
+    note: |
+      Strata actually contain some information about how the chunk is to be
+      built (repo, ref, build-system, build-depends).
+
+  Chunk: []
+
+  Artifact: []
+
+
+BitBake:
+  Recipe: []
+  Task: []
+  Class: []
+
+
+Bazel:
+  Workspace:
+    description: "Directory you run builds in"
+
+  Package:
+    description: |
+      "The primary unit of code organization in a workspace is the package. A
+      package is collection of related files and a specification of the
+      dependencies among them.
+
+      A package is defined as a directory containing a file named BUILD,
+      residing beneath the top-level directory in the workspace. A package
+      includes all files in its directory, plus all subdirectories beneath
+      it, except those which themselves contain a BUILD file."
+
+    contains: Target
+
+  Target:
+    description:
+      "A package is a container. The elements of a package are called targets.
+       Most targets are one of two principal kinds, files and rules.
+       Additionally, there is another kind of target, package groups, but they
+       are far less numerous."
+
+    subclasses:
+      File:
+        subclasses:
+          Source File: []
+          Generated File:
+            same-as: Derived File
+
+      Rule:
+        description: |
+          "A rule specifies a relationship between a set of inputs and a set of
+           output files, including the necessary steps to derive the outputs
+           from the inputs. The outputs of a rule are always generated files."
+
+    properties:
+      Label:
+        description: "The name of a target is called its label"
+        examples:
+          - "//my/app/main:app_binary"
+
+  Target Graph:
+    same-as: Build Dependency Graph
+
+Buildroot:
+  Package:
+    subclasses:
+      Virtual package: []
+
+Debian:
+  Package: []
+
+
+GNOME jhbuild:
+  Module: []
+  Moduleset: []
+
+
+GNU Guix:
+  Package: []
+  Derivation: []
+
+
+Nix:
+  Package: []
+  Derivation: []
+
